@@ -1,0 +1,64 @@
+version: '3'
+services:
+  traefik:
+    image: ${TRAEFIK_IMAGE_TAG}
+    command:
+      - "--log.level=${TRAEFIK_LOG_LEVEL}"
+      # - "--log.level=DEBUG"
+      - "--accesslog=true"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--ping=true"
+      - "--ping.entrypoint=ping"
+      - "--entryPoints.ping.address=:8084"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--providers.docker=true"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--providers.docker.exposedByDefault=false"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      # - "--metrics.prometheus=true"
+      # - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      # - "--global.checkNewVersion=true"
+      # - "--global.sendAnonymousUsage=false"
+      # - "--providers.file.filename=/middle/middlewares.yml" 
+
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.dashboard.rule=PathPrefix(`/dashboard`)"
+    #   - "traefik.http.routers.dashboard.service=api@internal"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik-certificates:/etc/traefik/acme
+      - ./middlewares.yml:/middle/middlewares.yml:ro 
+    networks:
+      - traefik-network
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "443:443"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "http://localhost:8084/ping",
+          "--spider"
+        ]
+      interval: 120s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-file: '1'
+        max-size: 512m
+
+networks:
+  traefik-network:
+    external: true

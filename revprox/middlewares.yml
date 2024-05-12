@@ -1,0 +1,8 @@
+http:
+  middlewares:
+    keycloakAuth:
+      forwardAuth:
+        address: "http://keyval:5000/validate"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Forwarded-User"
