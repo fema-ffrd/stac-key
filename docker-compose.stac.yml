@@ -59,7 +59,7 @@ services:
       - database
     networks:
       - traefik-network
-      - stac-fastapi-network
+      - stac-network
     command: bash -c "./scripts/wait-for-it.sh database:5432 && python -m stac_fastapi.pgstac.app"
 
   database:
