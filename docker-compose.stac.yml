@@ -2,9 +2,9 @@ version: '3'
 services:
   stac:
     container_name: stac-fastapi-pgstac
-    image: stac-utils/stac-fastapi-pgstac
     platform: linux/amd64
-    build: .
+    build:
+      context: ./stac-fastapi-pgstac
     environment:
       - APP_HOST=0.0.0.0
       - APP_PORT=8082
@@ -25,40 +25,33 @@ services:
       - USE_API_HYDRATE=${USE_API_HYDRATE:-false}
 
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.middlewares.compresstraefik.compress=true"
+    - "traefik.enable=true"
+    - "traefik.http.middlewares.compresstraefik.compress=true"
 
-      - "traefik.http.routers.public_collections.rule=Host(`${APP_HOST}`) && (Path(`/`) || Path(`/conformance`) || Path(`/collections`) || Path(`/queryables`) || Path(`/search`) || Path(`/_mgmt/ping`) || Path(`/api`)) && (Method(`GET`))"
-      - "traefik.http.routers.public_collections.entrypoints=websecure"
-      - "traefik.http.routers.public_collections.middlewares="
-      - "traefik.http.routers.public_collections.tls=true"
-      - "traefik.http.routers.public_collections.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.public_collections.priority=20"
+    - "traefik.http.routers.public_collections.rule=Host(`${APP_HOST}`) && Path(`/api`) || Path(`/api.html`) || Path(`/`) || Path(`/conformance`) || Path(`/collections`) || Path(`/search`) || Path(`/queryables`) || Path(`/_mgmt/ping`)"
+    - "traefik.http.routers.public_collections.priority=1"
+    - 'traefik.http.routers.public_collections.tls=true'
+    - "traefik.http.routers.public_collections.tls.certresolver=letsencrypt"
+    - "traefik.http.routers.public_collections.entrypoints=websecure"
+    - "traefik.http.routers.public_collections.service=public_stac"
+    - "traefik.http.services.public_stac.loadbalancer.server.port=8082"
 
-      - "traefik.http.routers.public_collections.service=public_stac"
-      - "traefik.http.services.public_stac.loadbalancer.passhostheader=true"
-      - "traefik.http.services.public_stac.loadbalancer.server.port=8082"
-
-      - "traefik.http.routers.authenticated_collections.rule=Host(`${APP_HOST}`) && Path(`/collections`) && (Method(`POST`) || Method(`PUT`) || Method(`DELETE`))"
-      - "traefik.http.routers.authenticated_collections.entrypoints=websecure"
-      - "traefik.http.routers.authenticated_collections.middlewares=keycloakAuth@file"
-      - "traefik.http.routers.authenticated_collections.tls=true"
-      - "traefik.http.routers.authenticated_collections.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.authenticated_collections.priority=20"
-
-      - "traefik.http.routers.authenticated_collections.service=authenticated_stac"
-      - "traefik.http.services.authenticated_stac.loadbalancer.passhostheader=true"
-      - "traefik.http.services.authenticated_stac.loadbalancer.server.port=8082"
-
-    # ports:
-    #   - "8082:8082"
-
+    - "traefik.http.routers.authenticated_collections.rule=Host(`${APP_HOST}`) && (Path(`/collections`) && Method(`POST`) || Method(`PUT`) || Method(`DELETE`)) || (Path(`/search`) && Method(`POST`))"
+    - "traefik.http.routers.authenticated_collections.priority=10000"
+    - 'traefik.http.routers.authenticated_collections.tls=true'
+    - "traefik.http.routers.authenticated_collections.tls.certresolver=letsencrypt"
+    - "traefik.http.routers.authenticated_collections.entrypoints=websecure"
+    - "traefik.http.routers.authenticated_collections.service=authenticated_stac"
+    - "traefik.http.services.authenticated_stac.loadbalancer.server.port=8082"
+    - "traefik.http.services.authenticated_stac.loadbalancer.passhostheader=true"
+    - "traefik.http.routers.authenticated_collections.middlewares=keycloakAuth@file"
+    
     volumes:
-      - .:/app
+      - ./stac-fastapi-pgstac:/app
+
     depends_on:
       - database
     networks:
-      - traefik-network
       - stac-network
     command: bash -c "./scripts/wait-for-it.sh database:5432 && python -m stac_fastapi.pgstac.app"
 
@@ -84,6 +77,4 @@ services:
 
 networks:
   stac-network:
-    external: false
-  traefik-network:
-    external: true
+    driver: bridge
