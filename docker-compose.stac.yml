@@ -36,7 +36,7 @@ services:
     - "traefik.http.routers.public_collections.service=public_stac"
     - "traefik.http.services.public_stac.loadbalancer.server.port=8082"
 
-    - "traefik.http.routers.authenticated_collections.rule=Host(`${APP_HOST}`) && (Path(`/collections`) && Method(`POST`) || Method(`PUT`) || Method(`DELETE`)) || (Path(`/search`) && Method(`POST`))"
+    - "traefik.http.routers.authenticated_collections.rule=Host(`${APP_HOST}`) && (Path(`/collections`) && Method(`POST`) || Method(`PUT`) || Method(`DELETE`))"
     - "traefik.http.routers.authenticated_collections.priority=10000"
     - 'traefik.http.routers.authenticated_collections.tls=true'
     - "traefik.http.routers.authenticated_collections.tls.certresolver=letsencrypt"
